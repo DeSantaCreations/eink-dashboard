@@ -20,7 +20,7 @@ LAT, LON = 40.7466, -73.9786          # zip 10016
 PLACE = "Murray Hill, NYC"
 TZ = ZoneInfo("America/New_York")
 HOURS_SHOWN = 8                        # hourly forecast columns
-DAYS_SHOWN = 6                         # daily forecast rows
+DAYS_SHOWN = 4                         # daily forecast rows (bottom-left kept free for SenseCraft sensor gauges)
 HEADLINES_SHOWN = 6
 # (short label, headlines per source, [feed URLs to try in order])
 FEEDS = [
