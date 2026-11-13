@@ -46,10 +46,19 @@ WMO = {
 }
 
 
-def get(url, timeout=20):
-    req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return r.read()
+def get(url, timeout=30, tries=4):
+    """Fetch a URL, retrying with growing pauses (10s, 20s, 30s) if the server is slow."""
+    import time
+    for attempt in range(1, tries + 1):
+        try:
+            req = urllib.request.Request(url, headers=UA)
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read()
+        except Exception as e:
+            if attempt == tries:
+                raise
+            print(f"retry {attempt} for {url}: {e}", file=sys.stderr)
+            time.sleep(10 * attempt)
 
 
 def fetch_weather():
@@ -65,7 +74,7 @@ def fetch_weather():
 
 
 def read_feed(url, n):
-    root = ET.fromstring(get(url))
+    root = ET.fromstring(get(url, tries=2))
     items = []
     for it in root.iter("item"):
         t = " ".join((it.findtext("title") or "").split())
@@ -193,7 +202,13 @@ def main():
         w, (label, heads) = sample["weather"], (sample["label"], sample["headlines"])
         now = datetime.fromisoformat(sample["now"]).replace(tzinfo=TZ)
     else:
-        w = fetch_weather()
+        try:
+            w = fetch_weather()
+        except Exception as e:
+            # Weather service unreachable: keep the last good page and end quietly,
+            # so a temporary outage never sends a failure email.
+            print(f"::warning::weather unavailable, keeping previous page ({e})")
+            return
         label, heads = fetch_headlines()
     OUT.parent.mkdir(exist_ok=True)
     OUT.write_text(render(w, label, heads, now), encoding="utf-8")
